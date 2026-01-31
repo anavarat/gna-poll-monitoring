@@ -1,0 +1,19 @@
+{
+  "name": "00polu",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run": "node src/run.js --parties parties.csv --out out/report.csv --headful",
+    "run:headless": "node src/run.js --parties parties.csv --out out/report.csv",
+    "test": "echo \"(no tests)\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "csv-stringify": "^6.6.0",
+    "playwright": "^1.58.1"
+  }
+}
