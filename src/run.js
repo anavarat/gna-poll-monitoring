@@ -113,10 +113,6 @@ async function runParty(browser, party) {
   const page = await context.newPage();
   await acceptDialogs(page);
 
-  page.on('console', (msg) => {
-    console.log(`[${party.party}] [console:${msg.type()}] ${msg.text()}`);
-  });
-
   // Helpful during redirect ping-pong (investharyana ↔ ocmms)
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) {
@@ -285,7 +281,8 @@ async function runParty(browser, party) {
           status: cr.status,
           keeping_with: cr.keepingWith,
           letter: cr.letter,
-          color: cr.cssColor,
+          color: cr.greenish ? 'Green' : (cr.cssColor || ''),
+          submission_date: cr.submissionDate || '',
         });
       }
 
@@ -353,13 +350,33 @@ async function main() {
         keeping_with: '',
         letter: '',
         color: '',
+        submission_date: '',
       });
     }
   }
 
   await browser.close();
 
-  const records = all.map(r => ({
+  const deduped = [];
+  const seen = new Set();
+  for (const r of all) {
+    const key = [
+      r.party,
+      r.caf,
+      r.department,
+      r.track_service_form_completed,
+      r.status,
+      r.keeping_with,
+      r.letter,
+      r.color,
+      r.submission_date,
+    ].join('||');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(r);
+  }
+
+  const records = deduped.map(r => ({
     party: r.party,
     caf: r.caf,
     department: r.department,
@@ -368,6 +385,7 @@ async function main() {
     'keeping with': r.keeping_with,
     letter: r.letter,
     color: r.color,
+    submissionDate: r.submission_date,
   }));
 
   const csv = stringify(records, {
@@ -381,6 +399,7 @@ async function main() {
       'keeping with',
       'letter',
       'color',
+      'submissionDate',
     ],
   });
 

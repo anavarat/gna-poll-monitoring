@@ -90,13 +90,25 @@ async function gotoCompletedApplications(page) {
 }
 
 async function extractCompletedRows(page) {
-  // Returns rows with: applicationNo, status, keepingWith, letter, cssColor, greenish
+  // Returns rows with: applicationNo, submissionDate, status, keepingWith, letter, cssColor, greenish
   await stabilizeOcmms(page);
 
   const rows = await evalRetry(page, () => {
+    const norm = s => (s || '').trim().toLowerCase();
     const tables = Array.from(document.querySelectorAll('table'));
-    const table = tables.find(t => (t.innerText || '').toLowerCase().includes('keeping with')) || tables[0];
+    const table = tables.find(t => {
+      const header = t.querySelector('thead') || t;
+      const txt = norm(header.innerText || '');
+      return txt.includes('application no') && txt.includes('submission') && txt.includes('keeping with');
+    });
     if (!table) return [];
+
+    const headerCells = Array.from(table.querySelectorAll('thead th')).map(th => norm(th.textContent));
+    const idx = (label) => headerCells.findIndex(h => h.includes(label));
+    const applicationNoIdx = idx('application no');
+    const submissionDateIdx = idx('submission');
+    const statusIdx = idx('status');
+    const keepingWithIdx = idx('keeping with');
 
     const trs = Array.from(table.querySelectorAll('tbody tr'));
     const out = [];
@@ -104,13 +116,14 @@ async function extractCompletedRows(page) {
       const tds = Array.from(tr.querySelectorAll('td'));
       if (tds.length < 4) continue;
 
-      const applicationNo = (tds[0].innerText || '').trim();
-      const status = (tds[5]?.innerText || '').trim();
-      const keepingWith = (tds[7]?.innerText || '').trim();
+      const applicationNo = (tds[applicationNoIdx]?.innerText || tds[0]?.innerText || '').trim();
+      const submissionDate = (tds[submissionDateIdx]?.innerText || tds[1]?.innerText || '').trim();
+      const status = (tds[statusIdx]?.innerText || '').trim();
+      const keepingWith = (tds[keepingWithIdx]?.innerText || '').trim();
 
       const last = tds[tds.length - 1];
       const letter = (last?.innerText || '').trim();
-      out.push({ applicationNo, status, keepingWith, letter });
+      out.push({ applicationNo, submissionDate, status, keepingWith, letter });
     }
     return out;
   });
@@ -121,8 +134,13 @@ async function extractCompletedRows(page) {
     const r = rows[idx];
 
     const cssColor = await evalRetry(page, (rowIndex) => {
+      const norm = s => (s || '').trim().toLowerCase();
       const tables = Array.from(document.querySelectorAll('table'));
-      const table = tables.find(t => (t.innerText || '').toLowerCase().includes('keeping with')) || tables[0];
+      const table = tables.find(t => {
+        const header = t.querySelector('thead') || t;
+        const txt = norm(header.innerText || '');
+        return txt.includes('application no') && txt.includes('submission') && txt.includes('keeping with');
+      });
       if (!table) return '';
       const tr = Array.from(table.querySelectorAll('tbody tr'))[rowIndex];
       if (!tr) return '';
