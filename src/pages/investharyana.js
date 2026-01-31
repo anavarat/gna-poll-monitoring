@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { ensureDir } = require('./io');
-const { clickByText } = require('./selectors');
+const { ensureDir } = require('../utils/io');
+const { clickByText } = require('../utils/selectors');
 
 async function loginInvestHaryana(page, { username, password, debugDir }) {
   await page.goto('https://investharyana.in/#/', { waitUntil: 'domcontentloaded' });

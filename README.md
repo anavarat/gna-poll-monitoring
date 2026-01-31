@@ -9,11 +9,12 @@ Outputs CSV with columns:
 - party (username)
 - caf
 - department
-- track service form # (completed)  *(we interpret as the OCMMS Application No)*
+- trackServiceForm#(completed)  *(we interpret as the OCMMS Application No)*
 - status
 - keeping with
 - letter
 - color
+- submissionDate
 
 ## Setup
 
@@ -45,10 +46,10 @@ If CAPTCHA blocks login, the script will pause and ask you to solve it in the vi
 
 What’s done:
 - `src/run.js` – main runner (party → CAFs → Track Service Form → OCMMS → Completed Application → extract rows → write CSV)
-- `src/investharyana.js` – InvestHaryana navigation + CAF/service scraping
-- `src/ocmms.js` – OCMMS “Completed Application” navigation + table extraction
-- `src/color.js` – green-ish classifier (HSL range)
-- `src/io.js`, `src/selectors.js` – helpers
+- `src/pages/investharyana.js` – InvestHaryana navigation + CAF/service scraping
+- `src/pages/ocmms.js` – OCMMS “Completed Application” navigation + table extraction
+- `src/utils/color.js` – green-ish classifier (HSL range)
+- `src/utils/io.js`, `src/utils/selectors.js` – helpers
 - `README.md`, `parties.example.csv`
 - `package.json` scripts updated (`npm run run` for headful)
 
@@ -56,11 +57,12 @@ Your CSV schema is implemented as columns:
 - party
 - caf
 - department
-- track service form #(completed)
+- trackServiceForm#(completed)
 - status
 - keeping with
 - letter
 - color
+- submissionDate
 
 ### Take it for a spin
 1) Create `parties.csv`:

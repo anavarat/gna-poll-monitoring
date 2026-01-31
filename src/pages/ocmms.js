@@ -1,4 +1,4 @@
-const { isGreenish } = require('./color');
+const { isGreenish } = require('../utils/color');
 
 function isContextDestroyedError(e) {
   const msg = String(e?.message || e || '');
@@ -116,13 +116,21 @@ async function extractCompletedRows(page) {
       const tds = Array.from(tr.querySelectorAll('td'));
       if (tds.length < 4) continue;
 
-      const applicationNo = (tds[applicationNoIdx]?.innerText || tds[0]?.innerText || '').trim();
+      const applicationNoRaw = (tds[applicationNoIdx]?.innerText || tds[0]?.innerText || '').trim();
+      const applicationNo = applicationNoRaw.replace(/\s+/g, ' ');
+      if (!/^\d{4,}$/.test(applicationNo)) continue;
+
       const submissionDate = (tds[submissionDateIdx]?.innerText || tds[1]?.innerText || '').trim();
       const status = (tds[statusIdx]?.innerText || '').trim();
       const keepingWith = (tds[keepingWithIdx]?.innerText || '').trim();
 
-      const last = tds[tds.length - 1];
-      const letter = (last?.innerText || '').trim();
+      const badgeEl = Array.from(tr.querySelectorAll('span,div,td,i,strong,b'))
+        .find(e => {
+          const t = (e.textContent || '').trim();
+          return t.length === 1 && /[a-z]/i.test(t);
+        }) || null;
+      const letter = (badgeEl?.textContent || '').trim();
+
       out.push({ applicationNo, submissionDate, status, keepingWith, letter });
     }
     return out;
@@ -144,9 +152,12 @@ async function extractCompletedRows(page) {
       if (!table) return '';
       const tr = Array.from(table.querySelectorAll('tbody tr'))[rowIndex];
       if (!tr) return '';
-      const tds = Array.from(tr.querySelectorAll('td'));
-      const last = tds[tds.length - 1];
-      const el = last?.querySelector('span,div') || last;
+      const badgeEl = Array.from(tr.querySelectorAll('span,div,td,i,strong,b'))
+        .find(e => {
+          const t = (e.textContent || '').trim();
+          return t.length === 1 && /[a-z]/i.test(t);
+        }) || null;
+      const el = badgeEl || tr;
       if (!el) return '';
       return window.getComputedStyle(el).color;
     }, idx);

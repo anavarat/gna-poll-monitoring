@@ -5,10 +5,10 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { stringify } = require('csv-stringify/sync');
 
-const { ensureDir, readCsvSimple, safeFilename } = require('./io');
-const { acceptDialogs } = require('./selectors');
-const inv = require('./investharyana');
-const ocmms = require('./ocmms');
+const { ensureDir, readCsvSimple, safeFilename } = require('./utils/io');
+const { acceptDialogs } = require('./utils/selectors');
+const inv = require('./pages/investharyana');
+const ocmms = require('./pages/ocmms');
 
 function parseArgs(argv) {
   const out = { headful: false, parties: 'parties.csv', out: 'out/report.csv' };
