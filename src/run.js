@@ -11,26 +11,16 @@ const inv = require('./pages/investharyana');
 const ocmms = require('./pages/ocmms');
 
 function parseArgs(argv) {
-  const out = { headful: false, parties: 'parties.csv', out: 'out/report.csv' };
+  const out = { headful: false, parties: 'parties.csv', out: 'out/report.csv', party: '' };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--headful') out.headful = true;
     else if (a === '--parties') out.parties = argv[++i];
+    else if (a === '--party') out.party = argv[++i];
     else if (a === '--out') out.out = argv[++i];
     else if (a === '--help' || a === '-h') out.help = true;
   }
   return out;
-}
-
-async function waitForEnter(msg) {
-  process.stdout.write(msg);
-  return new Promise((resolve) => {
-    process.stdin.resume();
-    process.stdin.once('data', () => {
-      process.stdin.pause();
-      resolve();
-    });
-  });
 }
 
 async function dumpDebugArtifacts(page, party, label) {
@@ -133,12 +123,11 @@ async function runParty(browser, party) {
   }
 
   if (loginRes.needsCaptcha) {
-    await waitForEnter(`\n[${party.party}] CAPTCHA detected. Solve it in the browser, then press Enter here...\n`);
-    await inv.clickSignIn(page);
+    console.log(`\n[${party.party}] CAPTCHA detected. Solve it in the browser and click Sign In. Waiting for login...\n`);
   }
 
   try {
-    await inv.waitForLoggedIn(page, 45000);
+    await inv.waitForLoggedIn(page, 20000);
   } catch {
     await dumpDebugArtifacts(page, party, 'login-not-complete');
     throw new Error('Login did not complete after Sign In');
@@ -308,7 +297,7 @@ async function runParty(browser, party) {
 async function main() {
   const args = parseArgs(process.argv);
   if (args.help) {
-    console.log('Usage: node src/run.js --parties parties.csv --out out/report.csv [--headful]');
+    console.log('Usage: node src/run.js --parties parties.csv --out out/report.csv [--headful] [--party username]');
     process.exit(0);
   }
 
@@ -321,10 +310,17 @@ async function main() {
 
   ensureDir(path.dirname(outPath));
 
-  const parties = readCsvSimple(partiesPath);
+  let parties = readCsvSimple(partiesPath);
   if (!parties.length) throw new Error('No parties found in parties.csv');
   if (!parties[0].party || !('password' in parties[0])) {
     throw new Error('parties.csv must have headers: party,password');
+  }
+  if (args.party) {
+    const match = parties.filter((p) => p.party === args.party);
+    if (!match.length) {
+      throw new Error(`Party not found in parties.csv: ${args.party}`);
+    }
+    parties = match;
   }
 
   const browser = await chromium.launch({
