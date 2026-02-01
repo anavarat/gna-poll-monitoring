@@ -1,4 +1,7 @@
 out/
 node_modules/
+dist/
+cli-browsers/
 parties*.csv
 tmp/
+allowed-macs.json

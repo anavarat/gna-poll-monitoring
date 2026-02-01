@@ -1,19 +1,26 @@
 {
-  "name": "00polu",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "run": "node src/run.js --parties parties.csv --out out/report.csv --headful",
-    "run:headless": "node src/run.js --parties parties.csv --out out/report.csv",
-    "test": "echo \"(no tests)\""
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "csv-stringify": "^6.6.0",
-    "playwright": "^1.58.1"
-  }
+    "name":  "00polu",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "scripts":  {
+                    "run":  "node src/run.js --parties parties.csv --out out/report.csv --headful",
+                    "run:headless":  "node src/run.js --parties parties.csv --out out/report.csv",
+                    "cli:install-browsers":  "set PLAYWRIGHT_BROWSERS_PATH=cli-browsers\u0026\u0026 npx playwright install chromium",
+    "cli:build":  "esbuild src/run.js --bundle --platform=node --format=cjs --outfile=dist/cli/polu-cli.cjs --external:playwright",
+                    "test":  "echo \"(no tests)\""
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "type":  "commonjs",
+    "bin":  "src/run.js",
+    "dependencies":  {
+                         "playwright":  "^1.58.1"
+                     },
+    "devDependencies":  {
+                            "esbuild":  "^0.20.2"
+                        }
 }

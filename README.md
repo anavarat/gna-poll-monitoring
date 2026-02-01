@@ -51,3 +51,20 @@ node src/run.js --parties parties.csv --out out/report.csv --headful
 - GitHub Actions workflow `.github/workflows/build-win.yml` can produce a Windows-ready bundle artifact `polu-win.tar.gz` (includes `node_modules` + Playwright browsers).
 
 If CAPTCHA blocks login, the script will pause and ask user to solve it in the visible browser window, then press Enter in the terminal to continue.
+
+
+---
+
+## Build Steps
+
+```
+npm install
+npm run cli:build
+npm run cli:install-browsers
+From electron-app:
+
+npm run build
+
+node dist/cli/polu-cli.cjs --parties parties.csv --out out/report.csv --headful
+
+```

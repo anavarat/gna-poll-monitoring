@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { chromium } = require('playwright');
-const { stringify } = require('csv-stringify/sync');
 
 const { ensureDir, readCsvSimple, safeFilename } = require('./utils/io');
 const { acceptDialogs } = require('./utils/selectors');
@@ -13,12 +12,16 @@ const ocmms = require('./pages/ocmms');
 
 function parseArgs(argv) {
   const out = { headful: false, parties: 'parties.csv', out: 'out/report.csv', party: '' };
+  const stripQuotes = (s) => String(s || '').replace(/^["']|["']$/g, '');
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--headful') out.headful = true;
-    else if (a === '--parties') out.parties = argv[++i];
-    else if (a === '--party') out.party = argv[++i];
-    else if (a === '--out') out.out = argv[++i];
+    else if (a === '--parties') out.parties = stripQuotes(argv[++i]);
+    else if (a.startsWith('--parties=')) out.parties = stripQuotes(a.slice('--parties='.length));
+    else if (a === '--party') out.party = stripQuotes(argv[++i]);
+    else if (a.startsWith('--party=')) out.party = stripQuotes(a.slice('--party='.length));
+    else if (a === '--out') out.out = stripQuotes(argv[++i]);
+    else if (a.startsWith('--out=')) out.out = stripQuotes(a.slice('--out='.length));
     else if (a === '--help' || a === '-h') out.help = true;
   }
   return out;
@@ -334,6 +337,8 @@ async function main() {
 
   const partiesPath = path.resolve(args.parties);
   const outPath = path.resolve(args.out);
+  console.log(`Using parties: ${partiesPath}`);
+  console.log(`Output: ${outPath}`);
 
   if (!fs.existsSync(partiesPath)) {
     throw new Error(`parties.csv not found at ${partiesPath}`);
@@ -415,20 +420,18 @@ async function main() {
     submissionDate: r.submission_date,
   }));
 
-  const csv = stringify(records, {
-    header: true,
-    columns: [
-      'party',
-      'caf',
-      'department',
-      'trackServiceForm#(completed)',
-      'status',
-      'keeping with',
-      'letter',
-      'color',
-      'submissionDate',
-    ],
-  });
+  const columns = [
+    'party',
+    'caf',
+    'department',
+    'trackServiceForm#(completed)',
+    'status',
+    'keeping with',
+    'letter',
+    'color',
+    'submissionDate',
+  ];
+  const csv = stringifyCsv(records, columns);
 
   fs.writeFileSync(outPath, csv);
   console.log(`\nWrote: ${outPath}`);
@@ -489,7 +492,28 @@ async function main() {
   }
 }
 
+function stringifyCsv(records, columns) {
+  const lines = [];
+  lines.push(columns.join(','));
+  for (const record of records) {
+    const row = columns.map((col) => csvEscape(record[col]));
+    lines.push(row.join(','));
+  }
+  return lines.join('\r\n');
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return '';
+  const s = String(value);
+  if (/[",\r\n]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+

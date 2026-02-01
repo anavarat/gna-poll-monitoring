@@ -12,13 +12,25 @@ files:
   - '!**/Thumbs.db'
   - '**/*'
 extraResources:
+  - from: ../dist/cli
+    to: cli
+    filter:
+      - 'polu-cli.cjs'
+  - from: ../node_modules/playwright
+    to: cli/node_modules/playwright
+    filter:
+      - '**/*'
+  - from: ../node_modules/playwright-core
+    to: cli/node_modules/playwright-core
+    filter:
+      - '**/*'
+  - from: ../cli-browsers
+    to: cli/cli-browsers
+    filter:
+      - '**/*'
   - from: ../
     to: cli
     filter:
-      - 'src/**'
-      - 'node_modules/**'
-      - 'package.json'
-      - 'package-lock.json'
       - 'out/**'
       - 'parties*.csv*'
       - 'parties.csv'

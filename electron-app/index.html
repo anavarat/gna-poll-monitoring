@@ -82,7 +82,9 @@
     }
 
     window.api.onStart((info) => {
-      statusEl.textContent = `Started: ${info.outPath}`;
+      statusEl.textContent = `Started.\nParties: ${info.partiesPath}\nOut: ${info.outPath}`;
+      appendLog(`[cli] parties: ${info.partiesPath}\n`);
+      appendLog(`[cli] out: ${info.outPath}\n`);
     });
 
     window.api.onComplete((payload) => {
