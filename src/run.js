@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { chromium } = require('playwright');
 const { stringify } = require('csv-stringify/sync');
 
@@ -32,6 +33,32 @@ async function dumpDebugArtifacts(page, party, label) {
   const html = await page.content().catch(() => '');
   if (html) fs.writeFileSync(htmlPath, html);
   console.error(`Debug artifacts saved: ${shotPath} / ${htmlPath}`);
+}
+
+function playSystemBeep() {
+  try {
+    if (process.platform === 'darwin') {
+      // macOS system sound
+      execSync('afplay /System/Library/Sounds/Glass.aiff', { stdio: 'ignore' });
+      return;
+    }
+    if (process.platform === 'win32') {
+      execSync('powershell -c "[console]::beep(1000,200)"', { stdio: 'ignore' });
+      return;
+    }
+    // Linux best-effort
+    execSync('paplay /usr/share/sounds/freedesktop/stereo/complete.oga', { stdio: 'ignore' });
+  } catch {
+    // fall back to terminal bell only
+  }
+}
+
+async function beep(times = 2, delayMs = 250) {
+  for (let i = 0; i < times; i++) {
+    process.stdout.write('\x07'); // terminal bell
+    playSystemBeep();
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
 }
 
 async function waitForStableURL(page, re, { timeoutMs = 120000, stableMs = 1500, pollMs = 200 } = {}) {
@@ -124,6 +151,7 @@ async function runParty(browser, party) {
 
   if (loginRes.needsCaptcha) {
     console.log(`\n[${party.party}] CAPTCHA detected. Solve it in the browser and click Sign In. Waiting for login...\n`);
+    await beep(3, 200);
   }
 
   try {
@@ -235,6 +263,9 @@ async function runParty(browser, party) {
         if (!openedNew) await backToServiceInProgress();
         continue;
       }
+
+      // Force OCMMS home regardless of landing page (e.g., applyConsent vs openIndustryHome)
+      await ocmmsPage.goto('https://hrocmms.nic.in/OCMMS/indUser/openIndustryHome', { waitUntil: 'domcontentloaded' }).catch(() => {});
 
       try {
         await ocmms.gotoCompletedApplications(ocmmsPage);
@@ -401,6 +432,61 @@ async function main() {
 
   fs.writeFileSync(outPath, csv);
   console.log(`\nWrote: ${outPath}`);
+
+  // Also emit a simple HTML table for quick viewing.
+  try {
+    const htmlRows = records.map(r => {
+      const status = (r.status || '').trim();
+      const isGranted = /grant/i.test(status);
+      const rowStyle = isGranted ? 'background:#d8f5d0;' : 'background:#fff6cc;';
+      return `
+        <tr style="${rowStyle}">
+          <td>${r.party}</td>
+          <td>${r.caf}</td>
+          <td>${r.department}</td>
+          <td>${r['trackServiceForm#(completed)']}</td>
+          <td>${r.status}</td>
+          <td>${r['keeping with']}</td>
+          <td>${r.letter}</td>
+          <td>${r.color}</td>
+          <td>${r.submissionDate}</td>
+        </tr>`;
+    }).join('\n');
+
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 14px; }
+    th { background: #f5f5f5; text-align: left; }
+    tr:nth-child(even) { background: #fafafa; }
+  </style>
+</head>
+<body>
+  <h2>Report</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>party</th><th>caf</th><th>department</th><th>trackServiceForm#(completed)</th><th>status</th><th>keeping with</th><th>letter</th><th>color</th><th>submissionDate</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${htmlRows}
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+    const htmlPath = path.join(path.dirname(outPath), 'report.html');
+    fs.writeFileSync(htmlPath, html, 'utf8');
+    console.log(`HTML view: ${htmlPath}`);
+  } catch (e) {
+    console.error('Failed to write HTML report:', e.message);
+  }
 }
 
 main().catch((e) => {

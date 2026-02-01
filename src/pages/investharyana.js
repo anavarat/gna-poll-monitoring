@@ -254,6 +254,28 @@ async function clickTrackServiceFormByRowIndex(page, rowIndex) {
   return { clickedLabel: info.text, href: info.href, target: info.target, onclick: info.onclick, tag: info.tag, outerHTML: info.outerHTML };
 }
 
+async function getRowActionDetails(page, rowIndex) {
+  return await page.evaluate((i) => {
+    const norm = (s) => (s || '').trim();
+    const tables = Array.from(document.querySelectorAll('table'));
+    const table = tables.find(t => (t.innerText || '').toLowerCase().includes('service name') && (t.innerText || '').toLowerCase().includes('department')) || tables[0];
+    if (!table) return [];
+    const tr = Array.from(table.querySelectorAll('tbody tr'))[i];
+    if (!tr) return [];
+    const buttons = Array.from(tr.querySelectorAll('button, a'));
+    return buttons.map((el) => ({
+      text: norm(el.textContent),
+      tag: (el.tagName || '').toLowerCase(),
+      href: el.getAttribute('href') || '',
+      onclick: el.getAttribute('onclick') || '',
+      ngClick: el.getAttribute('ng-click') || '',
+      id: el.getAttribute('id') || '',
+      classes: el.getAttribute('class') || '',
+      dataAction: el.getAttribute('data-action') || '',
+    }));
+  }, rowIndex);
+}
+
 async function currentCafPinFromSidebar(page) {
   return await page.evaluate(() => {
     // sidebar label like "CAF Pin (Composite Application Form): 4081710512"
@@ -302,6 +324,7 @@ module.exports = {
   closeAnyModal,
   rowHasTrackServiceForm,
   clickTrackServiceFormByRowIndex,
+  getRowActionDetails,
   currentCafPinFromSidebar,
   logout,
 };

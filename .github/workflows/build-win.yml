@@ -1,0 +1,35 @@
+name: build-win
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  bundle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Install Playwright chromium
+        run: npx playwright install chromium
+      - name: Create bundle archive
+        shell: bash
+        run: |
+          tar -czf polu-win.tar.gz \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='out' \
+            --exclude='dist' \
+            --exclude='tmp' \
+            .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: polu-win
+          path: polu-win.tar.gz
+          if-no-files-found: error

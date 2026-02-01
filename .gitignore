@@ -1,4 +1,4 @@
 out/
 node_modules/
-parties*.csv*
+parties*.csv
 tmp/
