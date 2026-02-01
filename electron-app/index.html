@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Polu GUI</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label { display: block; margin-top: 10px; }
+    input { width: 320px; padding: 6px; }
+    button { margin-top: 12px; padding: 8px 14px; }
+    #log { background: #111; color: #0f0; padding: 10px; height: 200px; overflow: auto; white-space: pre-wrap; }
+    #status { margin-top: 6px; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; background: #f7f7f7; }
+  </style>
+</head>
+<body>
+  <h2>Polu Automation</h2>
+  <label>Parties CSV: <input id="parties" value="parties.csv" /></label>
+  <label>Output CSV: <input id="out" value="out/report.csv" /></label>
+  <label>Party (optional): <input id="party" value="" /></label>
+  <button id="runBtn">Run</button>
+
+  <h3>Output</h3>
+  <div id="status"></div>
+  <div id="log"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+    let detachLogGlobal = null;
+    let runDone = false;
+
+    let lastCsv = '';
+    let lastHtml = '';
+
+    function updateStatusFromLogs() {
+      if (!lastCsv && !lastHtml) return;
+      if (lastHtml) {
+        const htmlLink = lastHtml.startsWith('file://') ? lastHtml : 'file://' + lastHtml;
+        statusEl.innerHTML = `CSV: ${lastCsv || '(pending)'}<br/>HTML: <a href="${htmlLink}" target="_blank">Open report.html</a>`;
+      } else if (lastCsv) {
+        statusEl.textContent = `CSV: ${lastCsv}`;
+      }
+    }
+
+    function appendLog(chunk) {
+      logEl.textContent += chunk;
+      logEl.scrollTop = logEl.scrollHeight;
+
+      // Parse paths from CLI output
+      const lines = chunk.split(/\r?\n/);
+      for (const line of lines) {
+        if (line.startsWith('Wrote: ')) {
+          lastCsv = line.replace('Wrote: ', '').trim();
+          updateStatusFromLogs();
+        }
+        if (line.startsWith('HTML view: ')) {
+          lastHtml = line.replace('HTML view: ', '').trim();
+          updateStatusFromLogs();
+        }
+      }
+    }
+
+    function showResult(payload) {
+      if (runDone) return;
+      runDone = true;
+      const htmlLink = payload.htmlPath.startsWith('file://') ? payload.htmlPath : 'file://' + payload.htmlPath;
+      statusEl.innerHTML = `CSV: ${payload.outPath}<br/>HTML: <a href="${htmlLink}" target="_blank">Open report.html</a>`;
+      logEl.innerHTML =
+        'Done.\n' +
+        'CSV: ' + payload.outPath + '\n' +
+        'HTML: <a href="' + htmlLink + '">Open report.html</a>\n\n' +
+        '<strong>Log:</strong>\n' +
+        '<div style="white-space:pre-wrap; background:#111; color:#0f0; padding:10px;">' +
+        (payload.stdout || '') + '\n' + (payload.stderr || '') +
+        '</div>';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Hook completion events (in case runCli rejects before we can show link)
+    if (!window.api) {
+      statusEl.textContent = 'ERROR: window.api not available (preload not loaded)';
+    }
+
+    window.api.onStart((info) => {
+      statusEl.textContent = `Started: ${info.outPath}`;
+    });
+
+    window.api.onComplete((payload) => {
+      showResult(payload);
+    });
+
+    document.getElementById('runBtn').onclick = async () => {
+      runDone = false;
+      statusEl.textContent = 'Running...';
+      lastCsv = '';
+      lastHtml = '';
+      logEl.textContent = 'Running...\n';
+      const args = {
+        parties: document.getElementById('parties').value.trim(),
+        out: document.getElementById('out').value.trim(),
+        party: document.getElementById('party').value.trim(),
+        headful: true,
+      };
+
+      // Attach streaming log listener
+      const detachLog = window.api.onLog((chunk) => {
+        appendLog(chunk);
+      });
+      detachLogGlobal = detachLog;
+
+      try {
+        const res = await window.api.runCli(args);
+        if (res && res.outPath) {
+          showResult(res);
+        } else {
+          statusEl.textContent = 'Finished, but no result payload.';
+        }
+      } catch (e) {
+        logEl.textContent = 'ERROR\n' + (e.stdout||'') + '\n' + (e.stderr||'');
+      } finally {
+        if (typeof detachLog === 'function') detachLog();
+        detachLogGlobal = null;
+      }
+    };
+  </script>
+</body>
+</html>

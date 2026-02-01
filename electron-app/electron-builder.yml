@@ -1,0 +1,30 @@
+appId: com.polu.gui
+productName: Polu GUI
+files:
+  - '!node_modules'
+  - '!*.log'
+  - '!out'
+  - '!dist'
+  - '!tmp'
+  - '!**/.git'
+  - '!**/.github'
+  - '!**/.DS_Store'
+  - '!**/Thumbs.db'
+  - '**/*'
+extraResources:
+  - from: ../
+    to: cli
+    filter:
+      - 'src/**'
+      - 'node_modules/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'out/**'
+      - 'parties*.csv*'
+      - 'parties.csv'
+      - 'parties.example.csv'
+      - 'README.md'
+      - '.env'
+win:
+  target:
+    - nsis
