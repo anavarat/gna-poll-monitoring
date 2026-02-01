@@ -52,12 +52,12 @@ ipcMain.handle('run-cli', async (event, args) => {
 
   return new Promise((resolve, reject) => {
     if (event?.sender) event.sender.send('cli-start', { partiesPath, outPath, cmdArgs });
+    const env = { ...process.env };
+    // In dev, let Playwright use the default cache. In packaged builds, prefer bundled browsers.
+    if (app.isPackaged) env.PLAYWRIGHT_BROWSERS_PATH = '0';
     const child = spawn(nodeCmd, cmdArgs, {
       cwd: base,
-      env: {
-        ...process.env,
-        PLAYWRIGHT_BROWSERS_PATH: '0',
-      },
+      env,
     });
     let stdout = '';
     let stderr = '';
