@@ -1,4 +1,4 @@
-name: build-win
+name: electron-win
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - 'v*'
 
 jobs:
-  bundle:
+  build:
     runs-on: windows-latest
     permissions:
       contents: write
@@ -16,35 +16,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install deps
+      - name: Install root deps
         run: npm ci
       - name: Install Playwright chromium
         run: npx playwright install chromium
-      - name: Create bundle archive
-        shell: bash
-        run: |
-          tar --warning=no-file-changed --ignore-failed-read -czf polu-win.tar.gz \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='out' \
-            --exclude='dist' \
-            --exclude='tmp' \
-            .
-      - name: Upload artifact
+      - name: Install electron deps
+        working-directory: electron-app
+        run: npm ci
+      - name: Build electron app (NSIS)
+        working-directory: electron-app
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: 0
+        run: npm run build
+      - name: Upload electron artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: polu-win
-          path: polu-win.tar.gz
+          name: polu-electron-win
+          path: electron-app/dist/**/*
           if-no-files-found: error
-
-      - name: Create GitHub Release (draft)
-        id: create_release
+      - name: Create draft release (NSIS)
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           draft: true
           prerelease: false
-          files: polu-win.tar.gz
+          files: electron-app/dist/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
