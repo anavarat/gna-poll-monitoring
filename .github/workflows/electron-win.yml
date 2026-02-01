@@ -34,6 +34,28 @@ jobs:
           name: polu-electron-win
           path: electron-app/dist/**/*
           if-no-files-found: error
+      - name: Delete existing release assets (same tag)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag
+            }).catch(() => ({ data: null }));
+            if (!release) {
+              core.info(`No release found for tag ${tag}`);
+              return;
+            }
+            for (const asset of release.assets) {
+              core.info(`Deleting asset: ${asset.name}`);
+              await github.rest.repos.deleteReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: asset.id
+              });
+            }
       - name: Create draft release (NSIS)
         uses: softprops/action-gh-release@v1
         with:
